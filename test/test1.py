@@ -1,22 +1,8 @@
-import argparse
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-parser = argparse.ArgumentParser(description="help")
-from loguru import logger
-logger.info("logging test")
+tokenizer = AutoTokenizer.from_pretrained("bigscience/T0pp")
+model = AutoModelForSeq2SeqLM.from_pretrained("bigscience/T0pp")
 
-class Student:
-    name = "unkown"
-    def __int__(self):
-        self.age = 20
-
-    @classmethod
-    def ToString(cls):
-        return "Student Class Attrutes: name={}".format(cls.name)
-
-logger.info(Student.ToString())
-
-import re
-ch_pattern = re.compile(r"[\u4e00-\u9fa5]+", re.M|re.I)
-html = r'<p class="board-content">榜单规则：将猫眼电影库中的经典影片，按照评分和评分人数从高到低综合排序取前100名，每天上午10点更新。相关数据来源于“猫眼电影库”。</p>'
-match = ch_pattern.findall(html)
-logger.info("".join(match))
+inputs = tokenizer.encode("Is this review positive or negative? Review: this is the best cast iron skillet you will ever buy", return_tensors="pt")
+outputs = model.generate(inputs)
+print(tokenizer.decode(outputs[0]))
