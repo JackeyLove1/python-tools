@@ -1,4 +1,10 @@
 import torch
+
+WEIGHT_INIT_RANGE = 0.1
+def init_weights(model):
+    for param in model.parameters():
+        torch.nn.init.uniform_(param, a=-WEIGHT_INIT_RANGE, b=WEIGHT_INIT_RANGE)
+
 # 通用
 def weight_init(m):
     classname = m.__class__.__name__
