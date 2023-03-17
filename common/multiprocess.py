@@ -1,6 +1,5 @@
 import multiprocessing
 import time
-import
 time_cost = 0.1
 
 def dance():
