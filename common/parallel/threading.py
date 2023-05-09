@@ -1,8 +1,3 @@
-import os
-import requests
-import time
-import random
-
 def timeit(func):
     def result():
         start_time = time.time()
