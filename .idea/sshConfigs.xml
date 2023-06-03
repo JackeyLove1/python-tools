@@ -2,7 +2,7 @@
 <project version="4">
   <component name="SshConfigs">
     <configs>
-      <sshConfig authType="PASSWORD" connectionConfig="{&quot;serverAliveInterval&quot;:300}" id="a2b6bf66-eeee-425a-9528-fa767af3ac46" port="22" customName="43.153.224.26" nameFormat="CUSTOM" useOpenSSHConfig="true">
+      <sshConfig authType="OPEN_SSH" connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="workspace" id="a2b6bf66-eeee-425a-9528-fa767af3ac46" port="22222" customName="43.153.224.26" nameFormat="CUSTOM" username="15798.fanhuanjie.ws" useOpenSSHConfig="true">
         <option name="customName" value="43.153.224.26" />
       </sshConfig>
     </configs>
