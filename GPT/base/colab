@@ -1,0 +1,5 @@
+!pip install -U text2vec
+!pip install qdrant-client>=1.1.1
+!pip install -U sentence-transformers
+!pip install -U similarities
+!pip install -U torch
