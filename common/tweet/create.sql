@@ -37,4 +37,3 @@ insert into SC values('06' , '01' , 31)
 insert into SC values('06' , '03' , 34)
 insert into SC values('07' , '02' , 89)
 insert into SC values('07' , '03' , 98)
-
