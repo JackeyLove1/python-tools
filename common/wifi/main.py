@@ -73,6 +73,3 @@ def readPassword():
         print("[*] 很遗憾未能帮你破解出当前指定WIFI的密码，请更换密码字典后重新尝试！")
     exit(0)
 
-
-if __name__=="__main__":
-    readPassword()

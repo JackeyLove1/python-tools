@@ -2,8 +2,8 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/backend/flasky" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/common/Learning" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/common/k8s-for-docker-desktop" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/flasky" vcs="Git" />
   </component>
 </project>
