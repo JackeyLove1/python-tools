@@ -1,3 +1,4 @@
+#
 # hello_milvus.py demonstrates the basic operations of PyMilvus, a Python SDK of Milvus.
 # 1. connect to Milvus
 # 2. create collection
@@ -178,3 +179,5 @@ print(f"query after delete by expr=`{expr}` -> result: {result}\n")
 # Finally, drop the hello_milvus collection
 print(fmt.format("Drop collection `hello_milvus`"))
 utility.drop_collection("hello_milvus")
+
+from langchain.vectorstores import Milvus
