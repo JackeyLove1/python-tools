@@ -24,9 +24,11 @@ import docx2txt
 from langchain.docstore.document import Document
 import fitz
 from hashlib import md5
+from markdown import markdown
 from abc import abstractmethod, ABC
 from copy import deepcopy
 import docx2txt
+from bs4 import BeautifulSoup
 
 
 class File(ABC):
@@ -85,11 +87,39 @@ class TxtFile(File):
         docs = text.strip()  # TODO: consider "\n"
         return cls(id=md5(files.read()).hexdigest(), docs=docs)
 
+class PdfFile(File):
+    @classmethod
+    def from_bytes(cls, files: BytesIO) -> "PdfFile":
+        files.seek(0)
+        pdf = fitz.open(stream=files.read(), filetype="pdf")
+        docs = " ".join([page.get_text().strip() for page in pdf])
+        docs = strip_consecutive_newlines(docs)
+        return cls(id=md5(files.read()).hexdigest(), docs=docs)
+
+class MdFile(File):
+    @classmethod
+    def from_bytes(cls, files: BytesIO) -> "MdFile":
+        files.seek(0)
+        text = files.read().decode("utf-8")
+        html = markdown(text)
+        soup = BeautifulSoup(html, 'html.parser')
+        docs = soup.get_text('\n')
+        docs = strip_consecutive_newlines(docs)
+        files.seek(0)
+        return cls(id=md5(files.read()).hexdigest(), docs=docs)
 
 docx_file_path = "test.docx"
 docx_file, _ = File.read_file_to_byte(docx_file_path)
 print(DocxFile.from_bytes(docx_file))
 
 txt_file_path = "test.txt"
-file, _ = File.read_file_to_byte(txt_file_path)
-print(TxtFile.from_bytes(file))
+txt_file, _ = File.read_file_to_byte(txt_file_path)
+print(TxtFile.from_bytes(txt_file))
+
+pdf_file_path = "test.pdf"
+pdf_file, _ = File.read_file_to_byte(pdf_file_path)
+print(PdfFile.from_bytes(pdf_file))
+
+md_file_path = "test.md"
+md_file, _ = File.read_file_to_byte(md_file_path)
+print(MdFile.from_bytes(md_file))
