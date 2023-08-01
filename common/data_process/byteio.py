@@ -29,7 +29,10 @@ from copy import deepcopy
 import docx2txt
 from bs4 import BeautifulSoup
 from pptx import Presentation
-
+import pytesseract
+from PIL import Image
+from paddleocr import PaddleOCR, draw_ocr
+import numpy as np
 class File(ABC):
     def __init__(self,
                  id: str,
@@ -86,6 +89,7 @@ class TxtFile(File):
         docs = text.strip()  # TODO: consider "\n"
         return cls(id=md5(files.read()).hexdigest(), docs=docs)
 
+
 class PdfFile(File):
     @classmethod
     def from_bytes(cls, files: BytesIO) -> "PdfFile":
@@ -94,6 +98,7 @@ class PdfFile(File):
         docs = " ".join([page.get_text().strip() for page in pdf])
         docs = strip_consecutive_newlines(docs)
         return cls(id=md5(files.read()).hexdigest(), docs=docs)
+
 
 class MdFile(File):
     @classmethod
@@ -106,6 +111,7 @@ class MdFile(File):
         docs = strip_consecutive_newlines(docs)
         files.seek(0)
         return cls(id=md5(files.read()).hexdigest(), docs=docs)
+
 
 class PptFile(File):
     @classmethod
@@ -123,23 +129,23 @@ class PptFile(File):
         files.seek(0)
         return cls(id=md5(files.read()).hexdigest(), docs=text)
 
-
-docx_file_path = "test.docx"
-docx_file, _ = File.read_file_to_byte(docx_file_path)
-print(DocxFile.from_bytes(docx_file))
-
-txt_file_path = "test.txt"
-txt_file, _ = File.read_file_to_byte(txt_file_path)
-print(TxtFile.from_bytes(txt_file))
-
-pdf_file_path = "test.pdf"
-pdf_file, _ = File.read_file_to_byte(pdf_file_path)
-print(PdfFile.from_bytes(pdf_file))
-
-md_file_path = "test.md"
-md_file, _ = File.read_file_to_byte(md_file_path)
-print(MdFile.from_bytes(md_file))
-
-ppt_file_path = "test.pptx"
-ppt_file, _ = File.read_file_to_byte(ppt_file_path)
-print(PptFile.from_bytes(ppt_file))
+class PaddleOCRPdfFile(File):
+    @classmethod
+    def from_bytes(cls, files: BytesIO) -> "PaddleOCRPdfFile":
+        files.seek(0)
+        pdf = fitz.open(stream=files.read(), filetype="pdf")
+        ocr_model = PaddleOCR(use_gpu=False)  # Set use_gpu=True if you have GPU
+        docs = ""
+        for page in range(len(pdf)):
+            pix = pdf[page].get_pixmap()
+            mode = "RGBA" if pix.alpha else "RGB"
+            img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+            img_np = np.array(img)
+            ocr_result = ocr_model.ocr(img_np)
+            for line in ocr_result:
+                line_text = [word_info[-1] for word_info in line]
+                text = ''.join([line[0] for line in line_text])
+                print(text)
+                docs += "\n" + text
+        docs = strip_consecutive_newlines(docs)
+        return cls(id=md5(files.read()).hexdigest(), docs=docs)

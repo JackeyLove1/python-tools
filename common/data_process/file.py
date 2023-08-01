@@ -1,12 +1,10 @@
 from io import BytesIO
 from typing import List, Any, Optional
 import re
-
 import docx2txt
 from langchain.docstore.document import Document
 import fitz
 from hashlib import md5
-
 from abc import abstractmethod, ABC
 from copy import deepcopy
 
@@ -15,11 +13,11 @@ class File(ABC):
     """Represents an uploaded file comprised of Documents"""
 
     def __init__(
-        self,
-        name: str,
-        id: str,
-        metadata: Optional[dict[str, Any]] = None,
-        docs: Optional[List[Document]] = None,
+            self,
+            name: str,
+            id: str,
+            metadata: Optional[dict[str, Any]] = None,
+            docs: Optional[List[Document]] = None,
     ):
         self.name = name
         self.id = id
