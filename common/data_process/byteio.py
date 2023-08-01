@@ -14,7 +14,6 @@ with open(file_path, 'rb') as f:
 import io
 from io import BytesIO
 import os
-
 import docx
 import langchain
 import openai
@@ -29,7 +28,7 @@ from abc import abstractmethod, ABC
 from copy import deepcopy
 import docx2txt
 from bs4 import BeautifulSoup
-
+from pptx import Presentation
 
 class File(ABC):
     def __init__(self,
@@ -108,6 +107,23 @@ class MdFile(File):
         files.seek(0)
         return cls(id=md5(files.read()).hexdigest(), docs=docs)
 
+class PptFile(File):
+    @classmethod
+    def from_bytes(cls, files: BytesIO) -> "PptFile":
+        files.seek(0)
+        prs = Presentation(files)
+        text = ""
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if shape.has_text_frame:
+                    for paragraph in shape.text_frame.paragraphs:
+                        for run in paragraph.runs:
+                            text += run.text
+        text = strip_consecutive_newlines(text)
+        files.seek(0)
+        return cls(id=md5(files.read()).hexdigest(), docs=text)
+
+
 docx_file_path = "test.docx"
 docx_file, _ = File.read_file_to_byte(docx_file_path)
 print(DocxFile.from_bytes(docx_file))
@@ -123,3 +139,7 @@ print(PdfFile.from_bytes(pdf_file))
 md_file_path = "test.md"
 md_file, _ = File.read_file_to_byte(md_file_path)
 print(MdFile.from_bytes(md_file))
+
+ppt_file_path = "test.pptx"
+ppt_file, _ = File.read_file_to_byte(ppt_file_path)
+print(PptFile.from_bytes(ppt_file))
