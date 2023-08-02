@@ -33,6 +33,11 @@ import pytesseract
 from PIL import Image
 from paddleocr import PaddleOCR, draw_ocr
 import numpy as np
+import whisper
+from moviepy.editor import VideoFileClip
+import time
+
+
 class File(ABC):
     def __init__(self,
                  id: str,
@@ -129,6 +134,7 @@ class PptFile(File):
         files.seek(0)
         return cls(id=md5(files.read()).hexdigest(), docs=text)
 
+
 class PaddleOCRPdfFile(File):
     @classmethod
     def from_bytes(cls, files: BytesIO) -> "PaddleOCRPdfFile":
@@ -149,3 +155,27 @@ class PaddleOCRPdfFile(File):
                 docs += "\n" + text
         docs = strip_consecutive_newlines(docs)
         return cls(id=md5(files.read()).hexdigest(), docs=docs)
+
+
+def extract_audio_from_video(video_path, audio_path):
+    video_clip = VideoFileClip(video_path)
+    audio_clip = video_clip.audio
+    audio_clip.write_audiofile(audio_path)
+    audio_clip.close()
+    video_clip.close()
+
+
+def extract_content_from_audio(file_path: str, model_size="small"):
+    model = whisper.load_model(model_size)
+    result = model.transcribe(file_path)
+    return result["text"]
+
+
+class AudioFile():
+    def from_path(self, file_path) -> 'AudioFile':
+        pass
+
+
+class VideoFile():
+    def from_path(self, file_path) -> 'VideoFile':
+        pass

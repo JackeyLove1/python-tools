@@ -1,0 +1,40 @@
+> docker run busybox ls -lh # 运行标准的 unix 命令
+docker run busybox ls -lh # 运行标准的 unix 命令
+# 运行标准的 unix 命令
+> docker run <image>:<tag>  # 运行指定版本的 image，tag 默认 latest
+docker run <image>:<tag>  # 运行指定版本的 image，tag 默认 latest
+# 运行指定版本的 image，tag 默认 latest
+# Dockerfile 包含构建 docker 镜像的命令
+Dockerfile 包含构建 docker 镜像的命令
+FROM node # 基础镜像
+ADD app.js /app.js # 将本地文件添加到镜像的根目录
+ENTRYPOINT ["node", "app.js"] # 镜像被执行时需被执行的命令
+> docker build -t kubia . # 在当前目录根据 Dockerfile 构建指定 tag 的镜像
+docker build -t kubia . # 在当前目录根据 Dockerfile 构建指定 tag 的镜像
+# 在当前目录根据 Dockerfile 构建指定 tag 的镜像
+> docker images # 列出本地所有镜像
+docker images # 列出本地所有镜像
+# 列出本地所有镜像
+# 执行基于 kubia 镜像，映射主机 8081 到容器内 8080 端口，并在后台运行的容器
+执行基于 kubia 镜像，映射主机 8081 到容器内 8080 端口，并在后台运行的容器
+> docker ps # 列出 running 容器
+docker ps # 列出 running 容器
+# 列出 running 容器
+> docker ps -a # 列出 running, exited 容器
+docker ps -a # 列出 running, exited 容器
+# 列出 running, exited 容器
+> docker exec -it kubia-container bash # 在容器内执行 shell 命令，如 ls/sh
+docker exec -it kubia-container bash # 在容器内执行 shell 命令，如 ls/sh
+# 在容器内执行 shell 命令，如 ls/sh
+> docker stop kubia-container # 停止容器
+docker stop kubia-container # 停止容器
+# 停止容器
+> docker rm kubia-container # 删除容器
+docker rm kubia-container # 删除容器
+# 删除容器
+> docker tag kubia wuyinio/kubia # 给本地镜像打标签
+docker tag kubia wuyinio/kubia # 给本地镜像打标签
+# 给本地镜像打标签
+> docker push wuyinio/kubia # push 到 DockerHub
+docker push wuyinio/kubia # push 到 DockerHub
+# push 到 DockerHub
