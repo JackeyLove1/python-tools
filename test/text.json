@@ -1,0 +1,17 @@
+{
+  "bytenas_blockmaster_dancenn_consul": "list://10.56.55.83:17335,10.56.55.73:17335,10.56.55.74:17335",
+  "bytenas_blockmaster_dancenn_keeper_consul": "list://10.56.55.83:17337,10.56.55.73:17337,10.56.55.74:17337",
+  "bytenas_blockmaster_log_dir": "/log/blockmaster",
+  "bytenas_blockmaster_port": "17338",
+  "bytenas_blockmaster_raft_peer_id": "{\"n56-049-067\":0,\"n56-052-048\":1,\"n56-048-092\":2}",
+  "bytenas_blockmaster_working_dir": "/data",
+  "bytenas_cluster_name": "bytenas-anas-cq0",
+  "bytenas_cluster_uuid": "bytenas-cncq47b3c7c762bc",
+  "bytenas_keeper_dns_suffix": "",
+  "bytenas_metrics_namespace": "VCM_veFileNAS",
+  "bytenas_qos_bandwidth_limit_step_per_gigabyte": 157286.4,
+  "bytenas_qos_max_bandwidth_limit": 10737418240,
+  "bytenas_qos_min_bandwidth_limit": 157286400,
+  "bytenas_region_name": "zk-hs.default.svc.mix-panel-azc-net-33.org.",
+  "bytenas_zk_port": "2181"
+}
