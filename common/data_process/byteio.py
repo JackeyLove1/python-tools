@@ -179,3 +179,5 @@ class AudioFile():
 class VideoFile():
     def from_path(self, file_path) -> 'VideoFile':
         pass
+
+# TODO: HTML Parser
