@@ -10,24 +10,23 @@ from langchain.text_splitter import LatexTextSplitter
 
 
 class BaseSpliter(ABC):
-    def __init__(self, content: str):
-        self.content = content
-
-    @abstractmethod
-    def split_content(self) -> List[str]:
+    def __init__(self):
         pass
 
     @abstractmethod
-    def create_document(self) -> List[Document]:
+    def split_content(self, content: str) -> List[str]:
         pass
 
-    # 字符分割
+    @abstractmethod
+    def create_document(self, content: str) -> List[Document]:
+        pass
 
 
+# 字符分割
 # 固定大小的分块
 class CharacterContentSplitter(BaseSpliter):
-    def __init__(self, content: str, chunk_size=256, chunk_overlap=20):
-        super().__init__(content)
+    def __init__(self, chunk_size=256, chunk_overlap=20):
+        super().__init__()
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.splitter = CharacterTextSplitter(
@@ -35,36 +34,35 @@ class CharacterContentSplitter(BaseSpliter):
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap)
 
-    def split_content(self) -> List[str]:
-        return self.splitter.split_text(self.content)
+    def split_content(self, content: str) -> List[str]:
+        return self.splitter.split_text(content)
 
-    def create_document(self) -> List[Document]:
+    def create_document(self, content) -> List[Document]:
         pass
 
-    # NLP语意分割
 
-
+# NLP语意分割
 class NLTKContentSplitter(BaseSpliter):
-    def __init__(self, content: str):
-        super().__init__(content)
+    def __init__(self):
+        super().__init__()
         self.splitter = NLTKTextSplitter()
 
-    def split_content(self) -> List[str]:
-        return self.splitter.split_text(self.content)
+    def split_content(self, content: str) -> List[str]:
+        return self.splitter.split_text(content)
 
-    def create_document(self) -> List[Document]:
+    def create_document(self, content: str) -> List[Document]:
         pass
 
 
 class SpaCyContentSplitter(BaseSpliter):
-    def __init__(self, content: str):
-        super().__init__(content)
+    def __init__(self):
+        super().__init__()
         self.splitter = SpacyTextSplitter()
 
-    def split_content(self) -> List[str]:
-        return self.splitter.split_text(self.content)
+    def split_content(self, content: str) -> List[str]:
+        return self.splitter.split_text(content)
 
-    def create_document(self) -> List[Document]:
+    def create_document(self, content: str) -> List[Document]:
         pass
 
     # 递归分块
@@ -74,50 +72,48 @@ class SpaCyContentSplitter(BaseSpliter):
 # 则该方法会使用不同的分隔符或条件递归调用生成的块，直到达到所需的块大小或结构。这意味着，虽然块的大小不会完全相同，
 # 但它们仍然追求具有相似的大小。
 class RecursiveCharacterContentSplitter(BaseSpliter):
-    def __init__(self, content: str, chunk_size=256, chunk_overlap=20):
-        super().__init__(content)
+    def __init__(self, chunk_size=256, chunk_overlap=20):
+        super().__init__()
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap)
 
-    def split_content(self) -> List[str]:
-        return self.splitter.split_text(self.content)
+    def split_content(self, content: str) -> List[str]:
+        return self.splitter.split_text(content)
 
-    def create_document(self) -> List[Document]:
+    def create_document(self, content: str) -> List[Document]:
         pass
 
-    # 特殊文本分块
-
-
+# 特殊文本分块
 class MarkdownContentSplitter(BaseSpliter):
-    def __init__(self, content: str, chunk_size=100, chunk_overlap=0):
-        super().__init__(content)
+    def __init__(self, chunk_size=100, chunk_overlap=0):
+        super().__init__()
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.splitter = MarkdownTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap)
 
-    def split_content(self) -> List[str]:
-        return self.splitter.split_text(self.content)
+    def split_content(self, content: str) -> List[str]:
+        return self.splitter.split_text(content)
 
-    def create_document(self) -> List[Document]:
+    def create_document(self, content: str) -> List[Document]:
         pass
 
 
 class LatexTContentSplitter(BaseSpliter):
-    def __init__(self, content: str, chunk_size=100, chunk_overlap=0):
-        super().__init__(content)
+    def __init__(self, chunk_size=100, chunk_overlap=0):
+        super().__init__()
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.splitter = LatexTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap)
 
-    def split_content(self) -> List[str]:
-        return self.splitter.split_text(self.content)
+    def split_content(self, content: str) -> List[str]:
+        return self.splitter.split_text(content)
 
-    def create_document(self) -> List[Document]:
+    def create_document(self, content: str) -> List[Document]:
         pass
