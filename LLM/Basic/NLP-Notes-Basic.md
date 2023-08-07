@@ -48,3 +48,24 @@ print(y_output)
 print(torch.sum(y_output, dim=1))
 
 ## Loss Function
+### MSE就是预测值与目标值之差的平方的平均值
+```pycon
+import torch.nn as nn
+mse_loss = nn.MSELoss()
+outputs = torch.randn(3, 5, requires_grad=True)
+targets = torch.randn(3, 5)
+loss = mse_loss(outputs, targets)
+print(loss)
+# tensor(1.3748, grad_fn=<MseLossBackward0>)
+```
+## categorical cross-entropy loss
+### 通常用于多类分类设置，其中输出被解释为类隶属度概率的预测
+```pycon
+ce_loss = nn.CrossEntropyLoss()
+outputs = torch.randn(3, 5, requires_grad=True)
+targets = torch.tensor([1, 0, 3], dtype=torch.int64)
+loss = ce_loss(outputs, targets)
+```
+
+## Binary Cross-Entropy
+### 
