@@ -69,3 +69,185 @@ loss = ce_loss(outputs, targets)
 
 ## Binary Cross-Entropy
 ### 
+pass 
+
+
+#### repeat_interleave
+```pycon
+import torch
+# 创建一个包含[1, 2, 3]的张量
+x = torch.tensor([1, 2, 3])
+# 使用repeat_interleave方法将每个元素重复扩展3次
+y = x.repeat_interleave(3)
+print(y)
+# tensor([1, 1, 1, 2, 2, 2, 3, 3, 3])
+```
+
+#### repeat
+torch.repeat方法用于沿指定的维度对张量进行复制和扩展。它会在指定的维度上重复复制张量的元素
+```pycon
+import torch
+# 创建一个包含[[1, 2], [3, 4]]的2维张量
+x = torch.tensor([[1, 2], [3, 4]])
+# 使用torch.repeat方法在维度0上重复复制2次
+y = x.repeat(2, 1)
+print(y)
+# tensor([[1, 2],[3, 4],[1, 2],[3, 4]])
+```
+
+#### torch.bmm
+用于执行批量矩阵乘法（batch matrix multiplication）操作。它接受三个输入张量，进行矩阵相乘操作，并返回结果张量。
+torch.bmm(mat1, mat2, *, out=None) -> Tensor
+参数：
+mat1：形状为(batch_size, n, m)的张量，表示批量的左操作数矩阵。
+mat2：形状为(batch_size, m, p)的张量，表示批量的右操作数矩阵。
+out（可选）：输出张量，用于指定计算结果的存储位置。
+返回值：
+形状为(batch_size, n, p)的张量，表示批量矩阵乘法的结果。
+```pycon
+import torch
+# 创建两个批量矩阵
+mat1 = torch.tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+mat2 = torch.tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+# 执行批量矩阵乘法
+result = torch.bmm(mat1, mat2)
+print(result)
+'''
+tensor([[[  7,  10],
+         [ 15,  22]],
+        [[ 67,  78],
+         [ 91, 106]]])
+'''
+```
+
+#### torch.unsqueeze
+用于在指定的维度上插入一个长度为1的维度。它可以用来改变张量的形状，增加维度的数量。这在进行某些操作或与其他张量进行广播操作时非常有用。
+参数：
+input：输入张量。
+dim：要插入新维度的位置。
+返回值：
+插入了新维度的张量。
+```pycon
+import torch
+# 创建一个形状为(3,)的张量
+x = torch.tensor([1, 2, 3])
+# 在维度0上插入一个新维度
+y = torch.unsqueeze(x, 0)
+print(y.shape)
+print(y)
+'''
+torch.Size([1, 3])
+tensor([[1, 2, 3]])
+'''
+```
+
+#### torch.transpose 
+`torch.transpose` 是 PyTorch 中用于对张量进行转置操作的函数。它可以改变张量的维度顺序，实现维度的转置。
+
+函数签名如下：
+```python
+torch.transpose(input, dim0, dim1) -> Tensor
+```
+
+参数说明：
+- `input`：要转置的输入张量。
+- `dim0`：要交换的第一个维度。
+- `dim1`：要交换的第二个维度。
+
+返回值：
+- 返回一个新的张量，其维度顺序是在输入张量的基础上进行了转置。
+
+下面是一个示例：
+
+```python
+import torch
+
+# 创建一个大小为(2, 3)的张量
+x = torch.tensor([[1, 2, 3], [4, 5, 6]])
+
+# 对张量进行转置
+y = torch.transpose(x, 0, 1)
+
+print("原始张量：")
+print(x)
+
+print("转置后的张量：")
+print(y)
+```
+输出结果：
+```
+原始张量：
+tensor([[1, 2, 3],
+        [4, 5, 6]])   
+转置后的张量：
+tensor([[1, 4],
+        [2, 5],
+        [3, 6]])
+```
+在上述示例中，我们创建了一个大小为(2, 3)的张量`x`。然后，使用`torch.transpose`函数将第一个维度和第二个维度进行转置，得到了转置后的张量`y`。可以看到，原始张量中的行变为了列，列变为了行。
+你可以根据需要在`torch.transpose`函数中指定要交换的维度，从而进行不同的转置操作。
+
+### torch.cat
+`torch.cat` 是 PyTorch 中用于连接（拼接）张量的函数。它可以将多个张量沿指定的维度进行拼接。
+
+函数签名如下：
+```python
+torch.cat(tensors, dim=0, *, out=None) -> Tensor
+```
+参数说明：
+- `tensors`：要拼接的张量序列，可以是一个张量列表或元组。
+- `dim`：指定拼接的维度，默认为 0，表示沿着第一个维度进行拼接。
+- `out`：可选参数，输出张量。
+示例用法：
+```python
+import torch
+# 创建两个张量
+x1 = torch.tensor([[1, 2], [3, 4]])
+x2 = torch.tensor([[5, 6]])
+# 沿着第一个维度拼接
+result = torch.cat((x1, x2), dim=0)
+print(result)
+```
+输出：
+```
+tensor([[1, 2],
+        [3, 4],
+        [5, 6]])
+```
+在上述示例中，我们创建了两个张量 `x1` 和 `x2`，然后使用 `torch.cat` 函数将它们沿着第一个维度拼接成一个新的张量 `result`。
+你可以根据实际需要选择要拼接的张量和拼接的维度。注意，要拼接的张量在指定维度上的大小必须是一致的，除了沿着该维度进行拼接外，其他维度的大小应该是相同的。
+
+
+#### torch.max
+`torch.max` 是一个 PyTorch 函数，用于在张量中找到指定维度上的最大值。它返回指定维度上的最大值以及对应的索引。
+
+函数签名如下：
+```python
+torch.max(input, dim=None, keepdim=False, *, out=None) -> (Tensor, LongTensor)
+```
+
+参数说明：
+- `input`：输入张量。
+- `dim`：指定的维度，用于在该维度上寻找最大值。如果未指定，则在整个张量上寻找最大值。
+- `keepdim`：一个布尔值，指示是否保持输出张量的维度和输入张量相同。
+- `out`：可选参数，输出张量以保存结果。
+返回值：
+- 一个包含最大值的张量。
+- 一个包含最大值索引的长整型张量。
+示例用法：
+```python
+import torch
+# 创建一个张量
+x = torch.tensor([[1, 2, 3], [4, 5, 6]])
+# 在指定维度上寻找最大值
+max_values, max_indices = torch.max(x, dim=1)
+print("Max Values:", max_values)
+print("Max Indices:", max_indices)
+```
+输出：
+```
+Max Values: tensor([3, 6])
+Max Indices: tensor([2, 2])
+```
+在上述示例中，我们创建了一个二维张量 `x`。然后，我们使用 `torch.max` 函数在第一个维度上寻找最大值。返回的 `max_values` 张量包含了每行的最大值，而 `max_indices` 张量包含了每行最大值的索引。
+你可以根据需要选择要在哪个维度上寻找最大值，以及是否保持输出张量的维度与输入张量相同。

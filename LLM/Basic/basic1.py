@@ -35,3 +35,4 @@ prelu = torch.nn.PReLU(num_parameters=1)
 y = prelu(x)
 plt.plot(x.numpy(), y.numpy())
 plt.show()
+
