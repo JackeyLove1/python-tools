@@ -90,6 +90,7 @@ class TxtFile(File):
         doc = Document(page_content=text.strip())
         return cls(name=file.name, id=md5(file.read()).hexdigest(), docs=[doc])
 
+# TODO: HTML Loader, support lxml and bs4
 
 def read_file(file: BytesIO) -> File:
     """Reads an uploaded file and returns a File object"""

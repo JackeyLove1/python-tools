@@ -254,9 +254,111 @@ Max Indices: tensor([2, 2])
 
 #### getattr
 
+#### torch one_hot
+```pycon
+import torch
+import torch.nn.functional as F
+# Define a tensor with integer values
+tensor = torch.tensor([1, 2, 0, 1, 2])
+# Convert the tensor to one-hot representation
+one_hot = F.one_hot(tensor)
+print(one_hot)
+```
+tensor([[0, 1, 0],[0, 0, 1],[1, 0, 0],[0, 1, 0],[0, 0, 1]])
 ### 词表
 词元的类型是字符串，而模型需要的输入是数字，因此这种类型不方便模型使用。 现在，让我们构建一个字典，通常也叫做词表（vocabulary）， 
 用来将字符串类型的词元映射到从 开始的数字索引中。 我们先将训练集中的所有文档合并在一起，对它们的唯一词元进行统计， 得到的统计结果称
 之为语料（corpus）。 然后根据每个唯一词元的出现频率，为其分配一个数字索引。 很少出现的词元通常被移除，这可以降低复杂性。 另外，
 语料库中不存在或已删除的任何词元都将映射到一个特定的未知词元“<unk>”。 我们可以选择增加一个列表，用于保存那些被保留的词元， 例如：
 填充词元（“<pad>”）； 序列开始词元（“<bos>”）； 序列结束词元（“<eos>”）。
+
+### 困惑度perplexity
+困惑度的最好的理解是“下一个词元的实际选择数的调和平均数”。 我们看看一些案例。
+在最好的情况下，模型总是完美地估计标签词元的概率为1。 在这种情况下，模型的困惑度为1。
+在最坏的情况下，模型总是预测标签词元的概率为0。 在这种情况下，困惑度是正无穷大。
+在基线上，该模型的预测是词表的所有可用词元上的均匀分布。 在这种情况下，困惑度等于词表中唯一词元的数量。 
+事实上，如果我们在没有任何压缩的情况下存储序列， 这将是我们能做的最好的编码方式。 因此，这种方式提供了一个重要的上限， 
+而任何实际模型都必须超越这个上限。
+
+### BLEU（bilingual evaluation understudy)
+最先是用于评估机器翻译的结果， 但现在它已经被广泛用于测量许多应用的输出序列的质量。 原则上说，对于预测序列中的任意
+元语法（n-grams），BLEU的评估都是这个元语法是否出现在标签序列中。
+
+### 束搜索（beam search）
+束搜索（beam search）是贪心搜索的一个改进版本。它有一个超参数，名为束宽（beam size)
+在时间步，我们选择具有最高条件概率的个词元。这个词元将分别是个候选输出序列的第一个词元。在随后的每个时间步，基于上一时间步的个候选输出序列， 
+我们将继续从个可能的选择中挑出具有最高条件概率的个候选输出序列。
+
+#### 为何独热向量是一个糟糕的选择
+我们使用独热向量来表示词（字符就是单词）。假设词典中不同词的数量（词典大小）为 ，每个词对应一个从 到 的不同整数（索引）。
+为了得到索引为 的任意词的独热向量表示，我们创建了一个全为0的长度为 的向量，并将位置 的元素设置为1。这样，每个词都被表示为
+一个长度为 的向量，可以直接由神经网络使用。 虽然独热向量很容易构建，但它们通常不是一个好的选择。一个主要原因是独热向量不能
+准确表达不同词之间的相似度，比如我们经常使用的“余弦相似度”。
+
+### 负采样
+在自然语言处理（NLP）领域中，负采样（Negative Sampling）是一种训练词嵌入（Word Embedding）模型的技术。它的目的是通过选择一些负样本，来提高模型的效率和性能。 
+简单来说，负采样是通过从大量的可能负样本中随机选择一小部分作为训练样本，而不使用所有的负样本。通常，在训练词嵌入模型时，我们希望模型能够将目标词与其上下文中的其他
+词区分开来，即将正样本（目标词与上下文词配对）的相似度提高，将负样本（目标词与随机选择的其他词配对）的相似度降低。
+```pycon
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, Dataset
+
+# 定义数据集类
+class WordContextDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+# 定义负采样模型
+class NegativeSamplingModel(nn.Module):
+    def __init__(self, vocab_size, embedding_dim):
+        super(NegativeSamplingModel, self).__init__()
+        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+    
+    def forward(self, target, context):
+        target_embed = self.embedding(target)
+        context_embed = self.embedding(context)
+        return target_embed, context_embed
+    
+# 设置超参数
+vocab_size = 10000
+embedding_dim = 100
+learning_rate = 0.001
+num_epochs = 10
+batch_size = 64
+# 构建示例数据集
+data = [(1, 2), (3, 4), (5, 6), ...]  # (target, context) pairs
+dataset = WordContextDataset(data)
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+# 初始化模型和优化器
+model = NegativeSamplingModel(vocab_size, embedding_dim)
+criterion = nn.MSELoss()
+optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+# 训练模型
+for epoch in range(num_epochs):
+    for batch in dataloader:
+        targets, contexts = batch
+        optimizer.zero_grad()
+        target_embed, context_embed = model(targets, contexts)
+        loss = criterion(target_embed, context_embed)
+        loss.backward()
+        optimizer.step()
+# 使用训练好的模型进行预测
+target = torch.tensor([1])
+context = torch.tensor([2])
+target_embed, context_embed = model(target, context)
+```
+### 下采样
+文本数据通常有“the”“a”和“in”等高频词：它们在非常大的语料库中甚至可能出现数十亿次。然而，这些词经常在上下文窗口中与许多不同的词
+共同出现，提供的有用信息很少。例如，考虑上下文窗口中的词“chip”：直观地说，它与低频单词“intel”的共现比与高频单词“a”的共现在训练
+中更有用。此外，大量（高频）单词的训练速度很慢。因此，当训练词嵌入模型时，可以对高频单词进行下采样 (Mikolov et al., 2013)。
+具体地说，数据集中的每个词将有概率地被丢弃。词频越大求起的概率就越大
+
+### 
