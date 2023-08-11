@@ -265,6 +265,56 @@ one_hot = F.one_hot(tensor)
 print(one_hot)
 ```
 tensor([[0, 1, 0],[0, 0, 1],[1, 0, 0],[0, 1, 0],[0, 0, 1]])
+
+#### torch contiguous()
+```pycon
+import torch
+# 创建一个非连续的张量
+x = torch.tensor([[1, 2, 3], [4, 5, 6]])
+y = x.t()  # 转置操作，导致存储方式不连续
+print(y.is_contiguous())  # False，y张量的存储方式不连续
+# 使用contiguous()方法使张量连续
+y = y.contiguous()
+print(y.is_contiguous())  # True，y张量的存储方式已变为连续
+```
+
+#### CROSSENTROPYLOSS
+```pycon
+# Example of target with class indices
+loss = nn.CrossEntropyLoss()
+input = torch.randn(3, 5, requires_grad=True)
+target = torch.empty(3, dtype=torch.long).random_(5)
+output = loss(input, target)
+output.backward()
+# Example of target with class probabilities
+input = torch.randn(3, 5, requires_grad=True)
+target = torch.randn(3, 5).softmax(dim=1)
+output = loss(input, target)
+output.backward()
+```
+
+#### optim.lr_scheduler.StepLR
+在上述例子中，优化器使用随机梯度下降（SGD）算法，初始学习率为 0.1。学习率调度器每经过一个训练步骤即一个 epoch，学习率会乘以 0.95 进行衰减。因此，第一个 epoch 结束后，学习率变为 0.1 * 0.95 = 0.095，第二个 epoch 结束后，学习率变为 0.095 * 0.95 = 0.09025，以此类推。
+通过使用学习率调度器，可以在训练过程中逐渐降低学习率，从而使模型在接近最优解时更加稳定地收敛。
+##### 如何选择步长
+步长的选择应该基于数据集的大小和训练的速度。例如，对于较大的数据集，可以选择较大的步长，而对于较小的数据集，可以选择较小的步长。通常，步长的值在几个 epochs 到几十个 epochs 之间。
+##### 选择衰减因子
+衰减因子决定学习率在每次更新时的缩放比例。较小的衰减因子会使学习率缓慢地衰减，而较大的衰减因子会使学习率迅速地衰减。一般来说，衰减因子的选择应该基于模型的复杂性和数据集的特点。对于复杂的模型和大型数据集，较小的衰减因子可能更适合，而对于简单的模型和小型数据集，较大的衰减因子可能更适合。一般来说，衰减因子的值在0到1之间。
+```pycon
+import torch
+from torch import optim
+from torch.optim import lr_scheduler
+# 创建一个优化器
+optimizer = optim.SGD(model.parameters(), lr=0.1)
+# 创建一个学习率调度器
+scheduler = lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.95)
+# 模拟训练过程
+for epoch in range(10):
+    # 在每个训练步骤之前更新学习率
+    scheduler.step()
+    # 进行模型训练
+    train(model, optimizer)
+```
 ### 词表
 词元的类型是字符串，而模型需要的输入是数字，因此这种类型不方便模型使用。 现在，让我们构建一个字典，通常也叫做词表（vocabulary）， 
 用来将字符串类型的词元映射到从 开始的数字索引中。 我们先将训练集中的所有文档合并在一起，对它们的唯一词元进行统计， 得到的统计结果称
