@@ -6,7 +6,7 @@ from dataclasses import dataclass
 class PromptParam:
     actor = "一位人工智能和python方面的专家"
     language = "pytorch"
-    algorithm = "自然语言处理NLP的fasttext"
+    algorithm = "自然语言处理NLP的TextRNN"
     domain = "自然语言处理NLP"
 
 
