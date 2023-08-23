@@ -372,3 +372,125 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
         progress_bar.update(1)
 ```
+
+### 保存模型
+```pycon
+# 将其上传到 Hub 的最简单方法是设置 push_to_hub=True 当你定义你的 TrainingArguments 
+# 该存储库将命名为您选择的输出目录（此处 bert-finetuned-mrpc ) 但您可以选择不同的名称 hub_model_id = a_different_name。
+# 要将您的模型上传到您所属的组织，只需将其传递给 hub_model_id = my_organization/my_repo_name。
+from transformers import TrainingArguments
+
+training_args = TrainingArguments(
+    "bert-finetuned-mrpc", save_strategy="epoch", push_to_hub=True
+)
+```
+
+### 加载数据集
+```pycon
+# !wget https://github.com/crux82/squad-it/raw/master/SQuAD_it-train.json.gz
+# !wget https://github.com/crux82/squad-it/raw/master/SQuAD_it-test.json.gz
+# !gzip -dkv SQuAD_it-*.json.gz
+from datasets import load_dataset
+
+squad_it_dataset = load_dataset("json", data_files="SQuAD_it-train.json", field="data")
+
+```
+```pycon
+'''
+但是我们真正想要的是包括 train 和 test 的 DatasetDict 对象。这样的话就可以使用 Dataset.map() 
+函数同时处理训练集和测试集。 为此, 我们提供参数data_files的字典,将每个分割名称映射到与该分割相关联的文件：
+'''
+data_files = {"train": "SQuAD_it-train.json", "test": "SQuAD_it-test.json"}
+squad_it_dataset = load_dataset("json", data_files=data_files, field="data")
+squad_it_dataset
+
+```
+#### 加载远程数据集
+```pycon
+url = "https://github.com/crux82/squad-it/raw/master/"
+data_files = {
+    "train": url + "SQuAD_it-train.json.gz",
+    "test": url + "SQuAD_it-test.json.gz",
+}
+squad_it_dataset = load_dataset("json", data_files=data_files, field="data")
+```
+
+#### 数据切片
+```pycon
+#!wget "https://archive.ics.uci.edu/ml/machine-learning-databases/00462/drugsCom_raw.zip"
+#!unzip drugsCom_raw.zip
+# 让我们使用 Dataset.map()标准化所有 condition 标签 .正如我们在第三章中所做的那样，我们可以定义一个简单的函数，可以将该函数应用于drug_dataset 拆分后每部分的所有行
+def lowercase_condition(example):
+    return {"condition": example["condition"].lower()}
+
+
+drug_dataset = drug_dataset.filter(lambda x: x["condition"] is not None)
+drug_dataset.map(lowercase_condition)
+
+slow_tokenizer = AutoTokenizer.from_pretrained("bert-base-cased", use_fast=False)
+
+
+def slow_tokenize_function(examples):
+    return slow_tokenizer(examples["review"], truncation=True)
+
+
+tokenized_dataset = drug_dataset.map(slow_tokenize_function, batched=True, num_proc=8)
+
+```
+
+### 构建标记器
+```pycon
+from datasets import load_dataset
+
+dataset = load_dataset("wikitext", name="wikitext-2-raw-v1", split="train")
+
+
+def get_training_corpus():
+    for i in range(0, len(dataset), 1000):
+        yield dataset[i : i + 1000]["text"]
+
+with open("wikitext-2.txt", "w", encoding="utf-8") as f:
+    for i in range(len(dataset)):
+        f.write(dataset[i]["text"] + "\n")
+
+from tokenizers import (
+    decoders,
+    models,
+    normalizers,
+    pre_tokenizers,
+    processors,
+    trainers,
+    Tokenizer,
+)
+
+tokenizer = Tokenizer(models.WordPiece(unk_token="[UNK]"))
+
+tokenizer.normalizer = normalizers.BertNormalizer(lowercase=True)
+
+tokenizer.normalizer = normalizers.Sequence(
+    [normalizers.NFD(), normalizers.Lowercase(), normalizers.StripAccents()]
+)
+
+print(tokenizer.normalizer.normalize_str("Héllò hôw are ü?"))
+
+tokenizer.pre_tokenizer = pre_tokenizers.BertPreTokenizer()
+
+tokenizer.pre_tokenizer.pre_tokenize_str("Let's test my pre-tokenizer.")
+
+pre_tokenizer = pre_tokenizers.WhitespaceSplit()
+pre_tokenizer.pre_tokenize_str("Let's test my pre-tokenizer.")
+
+pre_tokenizer = pre_tokenizers.Sequence(
+    [pre_tokenizers.WhitespaceSplit(), pre_tokenizers.Punctuation()]
+)
+pre_tokenizer.pre_tokenize_str("Let's test my pre-tokenizer.")
+
+special_tokens = ["[UNK]", "[PAD]", "[CLS]", "[SEP]", "[MASK]"]
+trainer = trainers.WordPieceTrainer(vocab_size=25000, special_tokens=special_tokens)
+
+tokenizer.train_from_iterator(get_training_corpus(), trainer=trainer)
+
+tokenizer.model = models.WordPiece(unk_token="[UNK]")
+tokenizer.train(["wikitext-2.txt"], trainer=trainer)
+
+```
