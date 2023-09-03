@@ -430,4 +430,18 @@ target_embed, context_embed = model(target, context)
 中更有用。此外，大量（高频）单词的训练速度很慢。因此，当训练词嵌入模型时，可以对高频单词进行下采样 (Mikolov et al., 2013)。
 具体地说，数据集中的每个词将有概率地被丢弃。词频越大求起的概率就越大
 
-### 
+### torch cat / stack
+功能：
+
+torch.cat：将张量序列按指定的维度进行拼接，保持其他维度不变。
+torch.stack：在新的维度上堆叠张量序列，增加张量的维度。
+用法：
+torch.cat的语法为：
+torch.cat(tensors, dim=0, *, out=None)
+其中 tensors 是要拼接的张量序列，dim 指定拼接的维度，默认为0。
+torch.stack的语法为：
+torch.stack(tensors, dim=0, *, out=None)
+其中 tensors 是要堆叠的张量序列，dim 指定堆叠的维度，默认为0。
+形状要求：
+torch.cat要求输入的张量序列在除指定的拼接维度以外的其他维度上具有相同的形状，以便进行拼接。
+torch.stack要求输入的张量序列在所有维度上都具有相同的形状，以便进行堆叠。
