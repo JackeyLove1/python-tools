@@ -12,11 +12,11 @@ chinese_sp_model_file = "sentencepisece_tokenizer/tokenizer.model"
 llama_tokenizer = LlamaTokenizer.from_pretrained(llama_tokenizer_dir)
 chinese_sp_model = spm.SentencePieceProcessor()
 chinese_sp_model.Load(chinese_sp_model_file)
+chinese_spm = sp_pb2_model.ModelProto()
+chinese_spm.ParseFromString(chinese_sp_model.serialized_model_proto())
 
 llama_spm = sp_pb2_model.ModelProto()
 llama_spm.ParseFromString(llama_tokenizer.sp_model.serialized_model_proto())
-chinese_spm = sp_pb2_model.ModelProto()
-chinese_spm.ParseFromString(chinese_sp_model.serialized_model_proto())
 
 # print number of tokens
 print(len(llama_tokenizer), len(chinese_sp_model))
