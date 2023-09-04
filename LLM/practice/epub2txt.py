@@ -1,4 +1,5 @@
 # pip install ebooklib
+# https://www.56wen.com/e/DownSys/doaction.php?id=10952
 import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
