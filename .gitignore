@@ -1,2 +1,4 @@
 LLM/Llama2_lora/*
 */data/*
+./LLM/datasets/*.zip
+./LLM/datasets/*.tsv
