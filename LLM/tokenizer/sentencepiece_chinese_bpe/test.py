@@ -56,3 +56,4 @@ The primary use of LLaMA is research on large language models, including'''
 print("Text:", text)
 print("llama:", llama_tokenizer.tokenize(text))
 print("chinese:", tokenizer.tokenize(text))
+# tokenizer.push_to_hub("JackyFan1/StoryLM", create_pr=1)
