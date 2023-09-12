@@ -34,7 +34,7 @@ python -m bitsandbytes
 ## 4、下载原始模型
 
 ```bash
-python model_download.py --repo_id daryl149/llama-2-7b-chat-hf
+python3 model_download.py --repo_id daryl149/llama-2-7b-chat-hf
 ```
 
 ## 5、扩充中文词表
@@ -43,7 +43,7 @@ python model_download.py --repo_id daryl149/llama-2-7b-chat-hf
 # 使用了https://github.com/ymcui/Chinese-LLaMA-Alpaca.git的方法扩充中文词表
 # 扩充完的词表在merged_tokenizes_sp（全精度）和merged_tokenizer_hf（半精度）
 # 在微调时，将使用--tokenizer_name ./merged_tokenizer_hf参数
-python merge_tokenizers.py \
+python3 merge_tokenizers.py \
   --llama_tokenizer_dir ./models/daryl149/llama-2-7b-chat-hf \
   --chinese_sp_model_file ./chinese_sp.model
 ```
