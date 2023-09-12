@@ -76,7 +76,7 @@ tail -f train.log
 ## 8、测试
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python generate.py \
+CUDA_VISIBLE_DEVICES=0 python3 generate.py \
     --base_model './models/daryl149/llama-2-7b-chat-hf' \
     --lora_weights 'output/checkpoint-2000' \
     --load_8bit #不加这个参数是用的4bit
