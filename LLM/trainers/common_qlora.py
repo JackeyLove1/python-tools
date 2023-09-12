@@ -8,7 +8,7 @@ import os
 import torch
 from datasets import load_dataset
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Dict
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
