@@ -6,9 +6,6 @@ pip install -q unstructured["local-inference"]==0.7.4 pillow
 
 import os
 import torch
-import transformers
-from typing import Optional, Dict
-from torch.utils.data import Dataset
 from datasets import load_dataset
 from dataclasses import dataclass, field
 from typing import Optional
@@ -23,8 +20,7 @@ from transformers import (
 )
 from peft import LoraConfig, PeftModel, get_peft_model
 from trl import SFTTrainer
-import deepspeed
-from transformers import LlamaTokenizer
+
 # Used for multi-gpu
 local_rank = -1
 per_device_train_batch_size = 4
@@ -84,14 +80,12 @@ report_to = "tensorboard"
 # Tensorboard logs
 tb_log_dir = "./results/logs"
 
-
 @dataclass
 class ScriptArguments:
     model_name: Optional[str] = field(default=model_name, metadata={"help": "the model name"})
     dataset_name: Optional[str] = field(
         default=dataset_name, metadata={"help": "the dataset name"}
     )
-
 
 def load_model(model_name):
     # Load tokenizer and model with QLoRA configuration
@@ -136,9 +130,7 @@ def load_model(model_name):
 
     return model, tokenizer, peft_config
 
-
 model, tokenizer, peft_config = load_model(model_name)
-
 
 def format_dolly(sample):
     instruction = f"<s>[INST] {sample['instruction']}"
@@ -148,47 +140,90 @@ def format_dolly(sample):
     prompt = "".join([i for i in [instruction, context, response] if i is not None])
     return prompt
 
-
 # template dataset to add prompt to each sample
 def template_dataset(sample):
     sample["text"] = f"{format_dolly(sample)}{tokenizer.eos_token}"
     return sample
 
-
 # apply prompt template per sample
-# dataset = load_dataset("databricks/databricks-dolly-15k", split="train")
+dataset = load_dataset("databricks/databricks-dolly-15k", split="train")
+
 # Shuffle the dataset
-# dataset_shuffled = dataset.shuffle(seed=42)
+dataset_shuffled = dataset.shuffle(seed=42)
+
 # Select the first 50 rows from the shuffled dataset, comment if you want 15k
-# dataset = dataset_shuffled.select(range(50))
-# dataset = dataset.map(template_dataset, remove_columns=list(dataset.features))
+dataset = dataset_shuffled.select(range(50))
+
+dataset = dataset.map(template_dataset, remove_columns=list(dataset.features))
+
 dataset = load_dataset("mlabonne/guanaco-llama2-1k", split="train")
 dataset_shuffled = dataset.shuffle(seed=42)
+
 # Select the first 50 rows from the shuffled dataset, comment if you want 15k
 dataset = dataset_shuffled.select(range(100))
+
 class SupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
+
     def __init__(
             self,
-            data,
+            data_path,
             tokenizer : transformers.LlamaTokenizer,
             model_max_length,
+            user_tokens=[195],
+            assistant_tokens=[196],
     ):
         super().__init__(SupervisedDataset, self)
-        self.data = data
+        self.data = json.load(open(data_path))
         self.tokenizer = tokenizer
         self.model_max_length = model_max_length
+        self.user_tokens = user_tokens
+        self.assistant_tokens = assistant_tokens
         self.ignore_index = -100
 
     def __len__(self):
         return len(self.data)
 
-    def preprocessing(self, item):
-        data = self.tokenizer.tokenize(item['text'],)
-        input_ids = data['input_ids']
-        attention_mask = data['attention_mask']
+    '''
+    {
+  "id": "77771",
+  "conversations": [
+   {
+    "from": "human",
+    "value": "写一篇关于气候变化对海洋生态的影响的文章。\n"
+   },
+   {
+    "from": "gpt",
+    "value": "好的，以下是你要求的文章：\n气候变化对海洋生态的影响\n气候变化对海洋生态产生了广泛的影响。全球变暖导致海洋温度上升，这可能会对许多水生生物的生存、繁殖和迁移造成巨大的影响。另外，海洋酸化也是一个问题，因为大气中二氧化碳的增加导致海水中的pH值下降，使得许多生物的外骨骼变得脆弱，从而影响它们的生存和繁殖。\n此外，气候变化还会引起海平面上升，这不仅对海岸线和沿海居民产生影响，还会对许多海洋生物的栖息地造成影响。一些岛屿上的陆地生物面临几乎完全消失的风险，而另一些生物范围则会扩大到更广泛的领域，这可能会导致新的竞争和生态平衡的改变。\n总之，气候变化并不只是一个地球气温的问题，它对海洋生态系统产生了广泛和深远的影响。\n"
+   },
+   {
+    "from": "human",
+    "value": "从刚刚的文章中提取出气候变化对海洋生物繁殖的影响。\n"
+   },
+   {
+    "from": "gpt",
+    "value": "文章已经提到过气候变化会对海洋生物的生存、繁殖和迁移造成影响。例如，海洋酸化会使得许多生物的外骨骼变得脆弱，进而影响它们的生存和繁殖。此外，海洋温度上升也可能会对很多生物的生存和繁殖产生负面影响。"
+   }
+  ]
+ },
+    '''
+    def preprocessing(self, example):
+        input_ids = []
         labels = []
 
+        for message in example['conversations']:
+            from_ = message["from"]
+            value = message["value"]
+            value_ids = self.tokenizer.encode(value)
+
+            if from_ == "human":
+                input_ids += self.user_tokens + value_ids
+                labels += [self.tokenizer.eos_token_id] + [self.ignore_index] * len(value_ids)
+            else:
+                input_ids += self.assistant_tokens + value_ids
+                labels += [self.ignore_index] + value_ids
+        input_ids.append(self.tokenizer.eos_token_id)
+        labels.append(self.tokenizer.eos_token_id)
         input_ids = input_ids[:self.model_max_length]
         labels = input_ids[:self.model_max_length]
         input_ids += [self.tokenizer.pad_token_id] * (self.model_max_length - len(input_ids))
@@ -205,11 +240,12 @@ class SupervisedDataset(Dataset):
     def __getitem__(self, idx) -> Dict[str, torch.Tensor]:
         return self.preprocessing(self.data[idx])
 
-# prompt = "how long does an American football match REALLY last, if you substract all the downtime?"
-#
-# pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, max_length=200)
-# result = pipe(f"<s>[INST] {prompt} [/INST]")
-# print(result[0]['generated_text'])
+
+prompt = "how long does an American football match REALLY last, if you substract all the downtime?"
+
+pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, max_length=200)
+result = pipe(f"<s>[INST] {prompt} [/INST]")
+print(result[0]['generated_text'])
 
 training_arguments = TrainingArguments(
     output_dir=output_dir,
@@ -229,15 +265,15 @@ training_arguments = TrainingArguments(
     report_to="tensorboard"
 )
 
-
-trainer = transformers.Trainer(
+trainer = SFTTrainer(
     model=model,
-    args=training_arguments,
     train_dataset=dataset,
+    peft_config=peft_config,
+    dataset_text_field="text",
+    max_seq_length=max_seq_length,
     tokenizer=tokenizer,
-    data_collator=transformers.DataCollatorForSeq2Seq(
-        tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True, max_length=max_seq_length,
-    ),
+    args=training_arguments,
+    packing=packing,
 )
 
 trainer.train()
