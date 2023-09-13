@@ -3,7 +3,7 @@ if [ ! -d ${output_model} ];then
     mkdir ${output_model}
 fi
 deepspeed  --master_port 29000 finetune-lora.py \
-    --model_name_or_path ./models/daryl149/llama-2-7b-chat-hf \
+    --model_name_or_path ./models/ziqingyang/chinese-llama-2-7b \
     --tokenizer_name ./merged_tokenizer_hf \
     --train_files ./data/new.json \
     --validation_files  ./data/trans_chinese_alpaca_data.json \

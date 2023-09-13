@@ -70,6 +70,6 @@ def download_model_retry(_repo_id):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--repo_id', default=None, type=str, required=True)
+    parser.add_argument('--repo_id', default="ziqingyang/chinese-llama-2-7b", type=str, required=True)
     args = parser.parse_args()
     download_model_retry(args.repo_id)

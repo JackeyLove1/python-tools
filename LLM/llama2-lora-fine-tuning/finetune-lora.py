@@ -61,7 +61,7 @@ DEFAULT_UNK_TOKEN = "<unk>"
 @dataclass
 class ModelArguments:
     model_name_or_path: Optional[str] = field(
-        default=None,
+        default="ziqingyang/chinese-llama-2-7b",
         metadata={
             "help": (
                 "The model checkpoint for weights initialization.Don't set if you want to train a model from scratch."
@@ -635,6 +635,7 @@ def train():
         trainer.save_state()
 
     logger.info("**********开始评估**********")
+    '''
     if training_args.do_eval:
         metrics = trainer.evaluate()
 
@@ -649,7 +650,7 @@ def train():
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
-
+    '''
 
 if __name__ == "__main__":
     # with torch.autocast("cuda"):
