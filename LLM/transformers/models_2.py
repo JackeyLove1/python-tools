@@ -6,10 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import torch.nn as nn
-
 import random
-
-import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 
@@ -75,11 +72,6 @@ def show_data(tensor_x, tensor_y) -> "str":
     return words_x, words_y
 
 
-x, y = get_data()
-print(x, y, "\n")
-print(show_data(x, y))
-
-
 # 定义数据集
 class TwoSumDataset(torch.utils.data.Dataset):
     def __init__(self, size=100000):
@@ -106,12 +98,6 @@ dl_val = DataLoader(dataset=ds_val,
                     batch_size=5000,
                     drop_last=True,
                     shuffle=False)
-
-for src, tgt in dl_train:
-    print(src.shape)
-    print(tgt.shape)
-    break
-
 
 def clones(module, N):
     "Produce N identical layers."
@@ -140,7 +126,7 @@ class MultiHeadAttention(nn.Module):
         assert d_model % h == 0
         self.d_k = d_model // h
         self.h = h
-        self.linears = clones(nn.Linear(d_model, d_model), 4) # w_q, w_k, w_v, fc
+        self.linears = clones(nn.Linear(d_model, d_model), 4)  # w_q, w_k, w_v, fc
         self.attn = None
         self.dropout = nn.Dropout(p=dropout)
         self.attention = ScaledDotProductAttention()
@@ -203,11 +189,6 @@ class MaskedBatch:
         tgt_tril_mask = tril_mask(tgt)
         tgt_mask = tgt_pad_mask & (tgt_tril_mask)
         return tgt_mask
-
-
-# 测试tril_mask
-mask = tril_mask(torch.zeros(1, 10))  # 序列长度为10
-print(mask)
 
 # 测试 ScaledDotProductAttention
 
@@ -454,6 +435,7 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
+
 # learn
 class NoamOpt(torch.optim.AdamW):
     def __init__(self, params, model_size=512, factor=1.0, warmup=4000,
@@ -482,18 +464,6 @@ class NoamOpt(torch.optim.AdamW):
             (self.model_size ** (-0.5) *
              min(step * self.warmup ** (-1.5), step ** (-0.5)))
 
-from torchkeras import summary
-net = Transformer.from_config(src_vocab = len(vocab_x),tgt_vocab = len(vocab_y),
-                   N=2, d_model=32, d_ff=128, h=8, dropout=0.1)
-
-mbatch = MaskedBatch(src=src,tgt=tgt,pad=0)
-
-summary(net,input_data_args = [mbatch.src,mbatch.tgt,mbatch.src_mask,mbatch.tgt_mask]);
-
-optimizer = NoamOpt(net.parameters(),
-        model_size=net.src_embed[0].d_model, factor=1.0,
-        warmup=400)
-
 
 class LabelSmoothingLoss(nn.Module):
     "Implement label smoothing."
@@ -519,6 +489,7 @@ class LabelSmoothingLoss(nn.Module):
         self.true_dist = true_dist
         return self.criterion(x, true_dist)
 
+
 # Example of label smoothing.
 # smooth_loss = LabelSmoothingLoss(5, 0, 0.4)
 # predict = torch.FloatTensor([[1e-10, 0.2, 0.7, 0.1, 1e-10],
@@ -529,89 +500,48 @@ class LabelSmoothingLoss(nn.Module):
 # print("smoothed target:\n",smooth_loss.true_dist,"\n")
 # print("loss:",loss)
 # px.imshow(smooth_loss.true_dist,color_continuous_scale="blues",height=600,width=1000)
-
-for src,tgt in dl_train:
+for src, tgt in dl_train:
     break
-mbatch = MaskedBatch(src=src,tgt=tgt,pad = 0)
+mbatch = MaskedBatch(src=src, tgt=tgt, pad=0)
 
-net = Transformer.from_config(src_vocab = len(vocab_x),tgt_vocab = len(vocab_y),
-                   N=3, d_model=64, d_ff=128, h=8, dropout=0.1)
-
-#loss
+net = Transformer.from_config(src_vocab=len(vocab_x), tgt_vocab=len(vocab_y),
+                              N=3, d_model=64, d_ff=128, h=8, dropout=0.1)
+# loss
 loss_fn = LabelSmoothingLoss(size=len(vocab_y),
-            padding_idx=0, smoothing=0.2)
+                             padding_idx=0, smoothing=0.2)
 preds = net.forward(mbatch.src, mbatch.tgt, mbatch.src_mask, mbatch.tgt_mask)
 preds = preds.reshape(-1, preds.size(-1))
 labels = mbatch.tgt_y.reshape(-1)
-loss = loss_fn(preds, labels)/mbatch.ntokens
-print('loss=',loss.item())
+loss = loss_fn(preds, labels) / mbatch.ntokens
 
-#metric
-preds = preds.argmax(dim=-1).view(-1)[labels!=0]
-labels = labels[labels!=0]
-
-acc = (preds==labels).sum()/(labels==labels).sum()
-print('acc=',acc.item())
-
-from torchmetrics import Accuracy
-#使用torchmetrics中的指标
-accuracy = Accuracy(task='multiclass',num_classes=len(vocab_y))
-accuracy.update(preds,labels)
-print('acc=',accuracy.compute().item())
+# metric
+preds = preds.argmax(dim=-1).view(-1)[labels != 0]
+labels = labels[labels != 0]
 
 
-def greedy_decode(net, src, src_mask, max_len, start_symbol):
-    net.eval()
-    memory = net.encode(src, src_mask)
-    ys = torch.full((len(src),max_len),start_symbol,dtype = src.dtype).to(src.device)
-    for i in range(max_len-1):
-        out = net.generator(net.decode(memory, src_mask,
-              ys, tril_mask(ys)))
-        ys[:,i+1]=out.argmax(dim=-1)[:,i]
-    return ys
+def xavier_init_weights(m):
+    if type(m) == nn.Linear:
+        nn.init.xavier_uniform_(m.weight)
 
-def get_raw_words(tensor,vocab_r) ->"str":
-    words = [vocab_r[i] for i in tensor.tolist()]
-    return words
 
-def get_words(tensor,vocab_r) ->"str":
-    s = "".join([vocab_r[i] for i in tensor.tolist()])
-    words = s[:s.find('<EOS>')].replace('<SOS>','')
-    return words
-
-##解码翻译结果
-# net = model.net
-# net.eval()
-# net = prepare(net)
-# src,tgt = get_data()
-# src,tgt = prepare(src),prepare(tgt)
-# mbatch = MaskedBatch(src=src.unsqueeze(dim=0),tgt=tgt.unsqueeze(dim=0))
-#
-# y_pred = greedy_decode(net,mbatch.src,mbatch.src_mask,50,vocab_y["<SOS>"])
-# print("input:")
-# print(get_words(mbatch.src[0],vocab_xr),'\n') #标签结果
-# print("ground truth:")
-# print(get_words(mbatch.tgt[0],vocab_yr),'\n') #标签结果
-# print("prediction:")
-# print(get_words(y_pred[0],vocab_yr)) #解码预测结果，原始标签中<PAD>位置的预测可以忽略
-#
-# from tqdm.auto import tqdm
-#
-# net = prepare(net)
-# loop = tqdm(range(1, 201))
-# correct = 0
-# for i in loop:
-#     src, tgt = get_data()
-#     src, tgt = prepare(src), prepare(tgt)
-#     mbatch = MaskedBatch(src=src.unsqueeze(dim=0), tgt=tgt.unsqueeze(dim=0))
-#     y_pred = greedy_decode(net, mbatch.src, mbatch.src_mask, 50, vocab_y["<SOS>"])
-#
-#     inputs = get_words(mbatch.src[0], vocab_xr)  # 标签结果
-#     gt = get_words(mbatch.tgt[0], vocab_yr)  # 标签结果
-#     preds = get_words(y_pred[0], vocab_yr)  # 解码预测结果，原始标签中<PAD>位置的预测可以忽略
-#     if preds == gt:
-#         correct += 1
-#     loop.set_postfix(acc=correct / i)
-#
-# print("acc=", correct / len(loop))
-
+net.apply(xavier_init_weights)
+# device = "cuda" if torch.cuda.is_available() else "cpu"
+# net.to(device)
+optimizer = NoamOpt(net.parameters(),
+                    model_size=net.src_embed[0].d_model, factor=1.0,
+                    warmup=400)
+num_epochs = 100
+for epoch in range(num_epochs):
+    loss_sum = 0
+    for src, tgt in dl_train:
+        optimizer.zero_grad()
+        mbatch = MaskedBatch(src=src, tgt=tgt, pad=0)
+        preds = net.forward(mbatch.src, mbatch.tgt, mbatch.src_mask, mbatch.tgt_mask)
+        preds = preds.reshape(-1, preds.size(-1))
+        labels = mbatch.tgt_y.reshape(-1)
+        loss = loss_fn(preds, labels) / mbatch.ntokens
+        loss_sum += loss.item()
+        # d2l.grad_clipping(net, 1)
+        loss.backward()
+        optimizer.step()
+    print(f"Epoch:{epoch}, loss:{loss_sum / len(dl_train)}")
