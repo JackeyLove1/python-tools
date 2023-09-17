@@ -181,30 +181,6 @@ def pad_mask(data, pad=0):
     mask = (data != pad).unsqueeze(-2)
     return mask
 
-
-# 计算一个batch数据的src_mask和tgt_mask
-class MaskedBatch:
-    "Object for holding a batch of data with mask during training."
-
-    def __init__(self, src, tgt=None, pad=0):
-        self.src = src
-        self.src_mask = pad_mask(src, pad)
-        if tgt is not None:
-            self.tgt = tgt[:, :-1]  # 训练时,拿tgt的每一个词输入,去预测下一个词,所以最后一个词无需输入
-            self.tgt_y = tgt[:, 1:]  # 第一个总是<SOS>无需预测，预测从第二个词开始
-            self.tgt_mask = \
-                self.make_tgt_mask(self.tgt, pad)
-            self.ntokens = (self.tgt_y != pad).sum()
-
-    @staticmethod
-    def make_tgt_mask(tgt, pad):
-        "Create a mask to hide padding and future words."
-        tgt_pad_mask = pad_mask(tgt, pad)
-        tgt_tril_mask = tril_mask(tgt)
-        tgt_mask = tgt_pad_mask & (tgt_tril_mask)
-        return tgt_mask
-
-
 # 测试tril_mask
 mask = tril_mask(torch.zeros(1, 10))  # 序列长度为10
 print(mask)
@@ -482,18 +458,6 @@ class NoamOpt(torch.optim.AdamW):
             (self.model_size ** (-0.5) *
              min(step * self.warmup ** (-1.5), step ** (-0.5)))
 
-from torchkeras import summary
-net = Transformer.from_config(src_vocab = len(vocab_x),tgt_vocab = len(vocab_y),
-                   N=2, d_model=32, d_ff=128, h=8, dropout=0.1)
-
-mbatch = MaskedBatch(src=src,tgt=tgt,pad=0)
-
-summary(net,input_data_args = [mbatch.src,mbatch.tgt,mbatch.src_mask,mbatch.tgt_mask])
-
-optimizer = NoamOpt(net.parameters(),
-        model_size=net.src_embed[0].d_model, factor=1.0,
-        warmup=400)
-
 
 class LabelSmoothingLoss(nn.Module):
     "Implement label smoothing."
@@ -519,190 +483,29 @@ class LabelSmoothingLoss(nn.Module):
         self.true_dist = true_dist
         return self.criterion(x, true_dist)
 
-# Example of label smoothing.
-# smooth_loss = LabelSmoothingLoss(5, 0, 0.4)
-# predict = torch.FloatTensor([[1e-10, 0.2, 0.7, 0.1, 1e-10],
-#                              [1e-10, 0.2, 0.7, 0.1, 1e-10],
-#                              [1e-10, 0.2, 0.7, 0.1, 1e-10]])
-# loss = smooth_loss(predict.log(), torch.LongTensor([2, 1, 0]))
-#
-# print("smoothed target:\n",smooth_loss.true_dist,"\n")
-# print("loss:",loss)
-# px.imshow(smooth_loss.true_dist,color_continuous_scale="blues",height=600,width=1000)
+# 计算一个batch数据的src_mask和tgt_mask
+class MaskedBatch:
+    "Object for holding a batch of data with mask during training."
 
-for src,tgt in dl_train:
-    break
-mbatch = MaskedBatch(src=src,tgt=tgt,pad = 0)
+    def __init__(self, src, tgt=None, pad=0):
+        self.src = src
+        self.src_mask = pad_mask(src, pad)
+        if tgt is not None:
+            self.tgt = tgt[:, :-1]  # 训练时,拿tgt的每一个词输入,去预测下一个词,所以最后一个词无需输入
+            self.tgt_y = tgt[:, 1:]  # 第一个总是<SOS>无需预测，预测从第二个词开始
+            self.tgt_mask = \
+                self.make_tgt_mask(self.tgt, pad)
+            self.ntokens = (self.tgt_y != pad).sum()
 
-net = Transformer.from_config(src_vocab = len(vocab_x),tgt_vocab = len(vocab_y),
-                   N=3, d_model=64, d_ff=128, h=8, dropout=0.1)
+    @staticmethod
+    def make_tgt_mask(tgt, pad):
+        "Create a mask to hide padding and future words."
+        tgt_pad_mask = pad_mask(tgt, pad)
+        tgt_tril_mask = tril_mask(tgt)
+        tgt_mask = tgt_pad_mask & (tgt_tril_mask)
+        return tgt_mask
 
-#loss
-loss_fn = LabelSmoothingLoss(size=len(vocab_y),
-            padding_idx=0, smoothing=0.2)
-preds = net.forward(mbatch.src, mbatch.tgt, mbatch.src_mask, mbatch.tgt_mask)
-preds = preds.reshape(-1, preds.size(-1))
-labels = mbatch.tgt_y.reshape(-1)
-loss = loss_fn(preds, labels)/mbatch.ntokens
-print('loss=',loss.item())
+model = Transformer.from_config(src_vocab = len(vocab_x),tgt_vocab = len(vocab_y),
+                   N=2, d_model=32, d_ff=128, h=8, dropout=0.1)
 
-#metric
-preds = preds.argmax(dim=-1).view(-1)[labels!=0]
-labels = labels[labels!=0]
-
-acc = (preds==labels).sum()/(labels==labels).sum()
-print('acc=',acc.item())
-
-from torchmetrics import Accuracy
-#使用torchmetrics中的指标
-accuracy = Accuracy(task='multiclass',num_classes=len(vocab_y))
-accuracy.update(preds,labels)
-print('acc=',accuracy.compute().item())
-
-from torchkeras import KerasModel
-
-
-class StepRunner:
-    def __init__(self, net, loss_fn,
-                 accelerator=None, stage="train", metrics_dict=None,
-                 optimizer=None, lr_scheduler=None
-                 ):
-        self.net, self.loss_fn, self.metrics_dict, self.stage = net, loss_fn, metrics_dict, stage
-        self.optimizer, self.lr_scheduler = optimizer, lr_scheduler
-        self.accelerator = accelerator
-        if self.stage == 'train':
-            self.net.train()
-        else:
-            self.net.eval()
-
-    def __call__(self, batch):
-        src, tgt = batch
-        mbatch = MaskedBatch(src=src, tgt=tgt, pad=0)
-
-        # loss
-        with self.accelerator.autocast():
-            preds = net.forward(mbatch.src, mbatch.tgt, mbatch.src_mask, mbatch.tgt_mask)
-            preds = preds.reshape(-1, preds.size(-1))
-            labels = mbatch.tgt_y.reshape(-1)
-            loss = loss_fn(preds, labels) / mbatch.ntokens
-
-            # filter padding
-            preds = preds.argmax(dim=-1).view(-1)[labels != 0]
-            labels = labels[labels != 0]
-
-        # backward()
-        if self.stage == "train" and self.optimizer is not None:
-            self.accelerator.backward(loss)
-            if self.accelerator.sync_gradients:
-                self.accelerator.clip_grad_norm_(self.net.parameters(), 1.0)
-            self.optimizer.step()
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
-            self.optimizer.zero_grad()
-
-        all_loss = self.accelerator.gather(loss).sum()
-        all_preds = self.accelerator.gather(preds)
-        all_labels = self.accelerator.gather(labels)
-
-        # losses (or plain metrics that can be averaged)
-        step_losses = {self.stage + "_loss": all_loss.item()}
-
-        step_metrics = {self.stage + "_" + name: metric_fn(all_preds, all_labels).item()
-                        for name, metric_fn in self.metrics_dict.items()}
-
-        if self.stage == "train":
-            if self.optimizer is not None:
-                step_metrics['lr'] = self.optimizer.state_dict()['param_groups'][0]['lr']
-            else:
-                step_metrics['lr'] = 0.0
-        return step_losses, step_metrics
-
-
-KerasModel.StepRunner = StepRunner
-
-from torchmetrics import Accuracy
-
-net = Transformer.from_config(src_vocab = len(vocab_x),tgt_vocab = len(vocab_y),
-                   N=5, d_model=64, d_ff=128, h=8, dropout=0.1)
-
-loss_fn = LabelSmoothingLoss(size=len(vocab_y),
-            padding_idx=0, smoothing=0.1)
-
-metrics_dict = {'acc':Accuracy(task='multiclass',num_classes=len(vocab_y))}
-optimizer = NoamOpt(net.parameters(),model_size=64)
-
-model = KerasModel(net,
-                   loss_fn=loss_fn,
-                   metrics_dict=metrics_dict,
-                   optimizer = optimizer)
-
-model.fit(
-    train_data=dl_train,
-    val_data=dl_val,
-    epochs=100,
-    ckpt_path='checkpoint',
-    patience=10,
-    monitor='val_acc',
-    mode='max',
-    callbacks=None,
-    plot=True
-)
-
-def greedy_decode(net, src, src_mask, max_len, start_symbol):
-    net.eval()
-    memory = net.encode(src, src_mask)
-    ys = torch.full((len(src),max_len),start_symbol,dtype = src.dtype).to(src.device)
-    for i in range(max_len-1):
-        out = net.generator(net.decode(memory, src_mask,
-              ys, tril_mask(ys)))
-        ys[:,i+1]=out.argmax(dim=-1)[:,i]
-    return ys
-
-def get_raw_words(tensor,vocab_r) ->"str":
-    words = [vocab_r[i] for i in tensor.tolist()]
-    return words
-
-def get_words(tensor,vocab_r) ->"str":
-    s = "".join([vocab_r[i] for i in tensor.tolist()])
-    words = s[:s.find('<EOS>')].replace('<SOS>','')
-    return words
-
-def prepare(x,accelerator=model.accelerator):
-    return x.to(accelerator.device)
-
-##解码翻译结果
-net = model.net
-net.eval()
-net = prepare(net)
-src,tgt = get_data()
-src,tgt = prepare(src),prepare(tgt)
-mbatch = MaskedBatch(src=src.unsqueeze(dim=0),tgt=tgt.unsqueeze(dim=0))
-
-y_pred = greedy_decode(net,mbatch.src,mbatch.src_mask,50,vocab_y["<SOS>"])
-print("input:")
-print(get_words(mbatch.src[0],vocab_xr),'\n') #标签结果
-print("ground truth:")
-print(get_words(mbatch.tgt[0],vocab_yr),'\n') #标签结果
-print("prediction:")
-print(get_words(y_pred[0],vocab_yr)) #解码预测结果，原始标签中<PAD>位置的预测可以忽略
-
-from tqdm.auto import tqdm
-
-net = prepare(net)
-loop = tqdm(range(1, 201))
-correct = 0
-for i in loop:
-    src, tgt = get_data()
-    src, tgt = prepare(src), prepare(tgt)
-    mbatch = MaskedBatch(src=src.unsqueeze(dim=0), tgt=tgt.unsqueeze(dim=0))
-    y_pred = greedy_decode(net, mbatch.src, mbatch.src_mask, 50, vocab_y["<SOS>"])
-
-    inputs = get_words(mbatch.src[0], vocab_xr)  # 标签结果
-    gt = get_words(mbatch.tgt[0], vocab_yr)  # 标签结果
-    preds = get_words(y_pred[0], vocab_yr)  # 解码预测结果，原始标签中<PAD>位置的预测可以忽略
-    if preds == gt:
-        correct += 1
-    loop.set_postfix(acc=correct / i)
-
-print("acc=", correct / len(loop))
-
+mbatch = MaskedBatch(src=src,tgt=tgt,pad=0)
