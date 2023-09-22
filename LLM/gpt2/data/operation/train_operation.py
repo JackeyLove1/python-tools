@@ -37,7 +37,7 @@ from tqdm import tqdm
 # I/O
 out_dir = 'out'
 out_ckpt = 'ckpt.pt'
-eval_interval = 1
+eval_interval = 20
 log_interval = 10
 eval_iters = 200
 eval_only = False  # if True, script exits right after the first eval
@@ -48,8 +48,9 @@ data_dir = ''
 sft_train = 'small_sft_train'
 sft_val = 'small_sft_val'  # temp, the same with training
 gradient_accumulation_steps = 5 * 8  # used to simulate larger batch sizes
-batch_size = 20  # if gradient_accumulation_steps > 1, this is the micro-batch size
-val_batch_size = 1
+batch_size = 4096 if torch.cuda.is_available() else 20  # if gradient_accumulation_steps > 1, this is the micro-batch size
+max_iters = 5000  # total number of training iterations
+val_batch_size = 20 if torch.cuda.is_available() else 1
 max_prompt_len = 20
 max_resp_len = 120
 sep_len = 1
@@ -63,7 +64,6 @@ dropout = 0.1  # for pretraining 0 is good, for finetuning try 0.1+
 bias = False  # do we use bias inside LayerNorm and Linear layers?
 # adamw optimizer
 learning_rate = 6e-4  # max learning rate
-max_iters = 1000  # total number of training iterations
 weight_decay = 1e-1
 beta1 = 0.9
 beta2 = 0.95
@@ -143,7 +143,8 @@ def get_batch(split):
     # get a random batch of sequences, each sequence is of length block_size
     n_row = len(data) // block_size
     # the caller should ensure the last row data is a sentinel, which will never be sampled
-    i_row = torch.randint(n_row - 1, (batch_size,))
+    data_batch = batch_size if split == "train" else val_batch_size
+    i_row = torch.randint(n_row - 1, (data_batch,))
     ix = i_row * block_size
     x = torch.stack([torch.from_numpy((data[i:i + block_size]).astype(np.int64)) for i in ix])
     y = torch.stack([torch.from_numpy((data[i + 1:i + 1 + block_size]).astype(np.int64)) for i in ix])
@@ -151,7 +152,7 @@ def get_batch(split):
     ix_sep = (x == tokenizer.equal_token_id).nonzero()
     ix_eos = (x == tokenizer.eos_token_id).nonzero()
     mask = torch.zeros_like(x, dtype=torch.float32)
-    for i in range(batch_size):
+    for i in range(data_batch):
         i_start = ix_sep[i][1]  # for x: including [EQUAL] as the start
         i_end = ix_eos[i][1]  # for x: exclude the [EOS] on tail
         mask[i][i_start:i_end] = 1
@@ -293,20 +294,24 @@ def calc_val_hit_ratio():
         batch_x = x[idx]
         calculation = tokenizer.decode(batch_x.tolist())
         equal_idx = calculation.find("=")
-        input = calculation[:equal_idx]
+        input = calculation[:equal_idx + 1]
         input_ids = tokenizer.encode(input)
-        output = calculation[equal_idx:]
+        output = calculation[equal_idx + 1:]
         labels = tokenizer.encode(output)
         print(f"input:{input}, output:{output}")
         print("input_ids:", input_ids)
         print("label:", labels)
-        result_ids = model.generate(torch.tensor(input_ids).view(1, -1), max_resp_len, temperature=1.0, top_k=None)
+        result_ids = model.generate(torch.tensor(input_ids).view(1, -1).to(device), max_resp_len, temperature=1.0,
+                                    top_k=None)
         input_ids = remove_tokens(input_ids, tokenizer.pad_token_id)
         output = remove_tokens(labels, tokenizer.pad_token_id)
         y_hat = remove_tokens(result_ids, tokenizer.pad_token_id)
         input_str = tokenizer.decode(input_ids.tolist())
         correct_output = tokenizer.decode(output.tolist())
         predict_output = tokenizer.decode(y_hat.tolist()).removeprefix(input_str)
+        eos_idx = predict_output.find("E")
+        eos_idx = eos_idx if eos_idx != -1 else eos_idx
+        predict_output = predict_output[:min(eos_idx + 1, len(predict_output) - 1)]
         print("input:", input_str)
         print("correct answer:", correct_output)
         print("predict answer:", predict_output)
