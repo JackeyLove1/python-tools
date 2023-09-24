@@ -113,9 +113,6 @@ else:
 tokens_per_iter = gradient_accumulation_steps * ddp_world_size * batch_size * block_size
 print(f"tokens per iteration will be: {tokens_per_iter:,}")
 
-if master_process:
-    if not out_dir.startswith('hdfs:'):  # only mkdir for valid local path
-        os.makedirs(out_dir, exist_ok=True)
 torch.manual_seed(1337 + seed_offset)
 torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
 torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
@@ -284,6 +281,8 @@ def remove_tokens(ids, token: int):
 
 @torch.no_grad()
 def calc_val_hit_ratio():
+    if ddp_rank != 0:
+        return 0, 1
     pad_token_str = tokenizer.decode(tokenizer.pad_token_id)
     model.eval()
     x, _, _ = get_batch("val")
