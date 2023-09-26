@@ -57,7 +57,10 @@ def step_by_step_calculation(expression):
                 st.append(token)
             else:
                 if token is "*":
-                    pass
+                    num1 = int(st.pop())
+                    used[idx-1] = True
+                    
+
 
     return steps
 

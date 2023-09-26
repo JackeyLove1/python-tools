@@ -36,7 +36,7 @@ nllloss = [-log_output[0, 1] , -log_output[1, 2] , -log_output[2, 3]]
 nllloss_func = nn.NLLLoss(reduction='none')
 nllloss_output = nllloss_func(log_output, y_target)
 print(f'nllloss_output:{nllloss_output}')
-print("output:", [log_output[0, 1] , log_output[1, 2] , log_output[2, 3]])
+print("output:", [-log_output[0, 1].item(), -log_output[1, 2].item(), -log_output[2, 3].item()])
 '''
 tensor([ 2.4402,  2.1451, 10.0000])
 '''
