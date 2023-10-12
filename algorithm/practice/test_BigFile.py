@@ -9,14 +9,17 @@ class TestBigFile(unittest.TestCase):
     def setUp(self) -> None:
         self.args = BigFileTestArgs()
         self.args.mount_path = os.getcwd()
-        self.args.file_size = 20 * 1024 * 1024  # 10M
+        self.args.file_size = 20 * 1024 * 1024
+        self.args.chunk_size = 1024 * 4
         self.args.debug = True
-        self.args.max_test_write_length = 1 * 1024 * 1024  # 1M
-        self.args.max_test_truncate_size= 40 * 1024 * 1024 # 20M
-        self.args.prepare_work()
+        self.args.max_test_write_length = 50 * 1024 * 1024
+        self.args.max_test_truncate_size= 100 * 1024 * 1024
+        self.args.local_mode = True
+        self.args.setUp()
 
     def tearDown(self) -> None:
-        os.system("rm -rf {}".format(self.args.file_name))
+        # os.system("rm -rf {}".format(self.args.file_name))
+        pass
 
     def test_write_file(self):
         offset = 0
@@ -51,7 +54,7 @@ class TestBigFile(unittest.TestCase):
             print("expected:{}, actual:{}".format(expected_md5, actual_md5))
             self.assertEqual(expected_md5, actual_md5)
 
-    def test_random_write(self):
+    def test_random_write_simple(self):
         write_bigfile(self.args)
         for _ in range(200):
             offset = self.args.chunk_size * random.randint(0, self.args.write_nums - 1)
@@ -67,5 +70,35 @@ class TestBigFile(unittest.TestCase):
             self.assertEqual(actual_md5, expected_md5)
         check_total_file(self.args)
 
+    def test_random_write(self):
+        write_bigfile(self.args)
+        for _ in range(100):
+            random_write(self.args)
+
     def test_random_truncate(self):
-        pass
+        write_bigfile(self.args)
+        for _ in range(100):
+            random_truncate(self.args)
+
+    def test_random_integration(self):
+        write_bigfile(self.args)
+        for _ in range(50):
+            random_write(self.args)
+            random_truncate(self.args)
+
+    def test_write_specific_file(self):
+        for _ in range(100):
+            expected_size = random.randint(1, 1000) * self.args.chunk_size
+            self.args.file_size =expected_size
+            write_bigfile(self.args)
+            actual_size = os.path.getsize(self.args.file_name)
+            print("file_name:{}, expected_size: {}, actual size:{}".format(self.args.file_name, expected_size, actual_size))
+            self.assertEquals(actual_size, self.args.file_size)
+            os.system("rm -rf {}".format(self.args.file_name))
+
+    def test_truncate_specific_size(self):
+        write_bigfile(self.args)
+        for _ in range(100):
+            truncate_size = random.randint(1, 100) * self.args.chunk_size
+            truncate_file(self.args, truncate_size)
+            self.assertEqual(os.path.getsize(self.args.file_name), truncate_size)
