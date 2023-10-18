@@ -457,7 +457,7 @@ def local_test():
     execute(file)
 
 
-def tiny_mount_test():
+def mount_test():
     test_size = 1 * GB
     mount_path = "/mnt"
     file = get_bigfile_handler(mount_path, "", test_size, False)
