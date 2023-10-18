@@ -441,18 +441,35 @@ def parse_arguments():
     return args
 
 
-def main():
-    '''write_verify - random_write - random_truncate'''
-    args = parse_arguments()
-    file = get_bigfile_handler(args.mount_dir, args.work_dir, args.size, args.local)
+def execute(file: BigFileTestArgs, nums=100):
     # write and check md5
     write_bigfile(file)
     check_total_file(file)
     # random write and truncate many times
-    for _ in range(args.nums):
+    for _ in range(nums):
         random_write(file)
         random_truncate(file)
 
 
+def local_test():
+    test_size = 100 * MB
+    file = get_bigfile_handler("", "", test_size, True)
+    execute(file)
+
+
+def tiny_mount_test():
+    test_size = 1 * GB
+    mount_path = "/mnt"
+    file = get_bigfile_handler(mount_path, "", test_size, False)
+    execute(file)
+
+
+def main():
+    '''write_verify - random_write - random_truncate'''
+    args = parse_arguments()
+    file = get_bigfile_handler(args.mount_dir, args.work_dir, args.size, args.local)
+    execute(file, args.nums)
+
+
 if __name__ == "__main__":
-    main()
+    local_test()
