@@ -1,5 +1,7 @@
 import os
 import random
+import sys
+sys.path.append("..")
 
 from BigFileTest import *
 import unittest
@@ -102,3 +104,4 @@ class TestBigFile(unittest.TestCase):
             truncate_size = random.randint(1, 100) * self.args.chunk_size
             truncate_file(self.args, truncate_size)
             self.assertEqual(os.path.getsize(self.args.file_name), truncate_size)
+            self.assertEqual(truncate_size, self.args.file_size)
