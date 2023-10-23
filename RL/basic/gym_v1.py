@@ -9,8 +9,9 @@ for _ in range(2):
     action = env.action_space.sample()
     print("action:", action)
     observation, reward, terminated, truncated, info = env.step(action)
-    observation = np.array(observation)
-    observation = torch.from_numpy(observation)
+    # observation = np.array(observation)
+    # observation = torch.from_numpy(observation)
+    observation = torch.tensor(observation)
     print(f"observation:{observation}, reward:{reward}, terminated:{terminated}, info:{info}")
     if terminated or truncated:
         observation, info = env.reset()
